@@ -1,0 +1,752 @@
+/* =========================================================
+   GLOBAL
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f4f7fb;
+  color: #1f2937;
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* =========================================================
+   LOGIN PAGE
+   ========================================================= */
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(
+    135deg,
+    #eef4ff,
+    #f8fbff
+  );
+  padding: 20px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 430px;
+  background: white;
+  padding: 40px;
+  border-radius: 18px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.10);
+  text-align: center;
+}
+
+.login-logo {
+  width: 70px;
+  height: 70px;
+  margin: 0 auto 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eaf2ff;
+  border-radius: 50%;
+  font-size: 34px;
+}
+
+.login-card h1 {
+  margin: 5px 0;
+  font-size: 30px;
+  color: #173b73;
+}
+
+.login-subtitle {
+  margin: 8px 0 28px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.login-card form {
+  text-align: left;
+}
+
+.login-card label {
+  display: block;
+  margin: 15px 0 7px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.login-card input {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid #d5dce7;
+  border-radius: 8px;
+  outline: none;
+  font-size: 14px;
+}
+
+.login-card input:focus {
+  border-color: #3976d8;
+  box-shadow: 0 0 0 3px rgba(57, 118, 216, 0.12);
+}
+
+.login-button {
+  width: 100%;
+  margin-top: 22px;
+  padding: 13px;
+  border: none;
+  border-radius: 8px;
+  background: #2463c5;
+  color: white;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.login-button:hover {
+  background: #1c51a3;
+}
+
+.demo-login {
+  margin-top: 22px;
+  padding: 12px;
+  background: #f3f6fa;
+  border-radius: 8px;
+  color: #596579;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.login-disclaimer {
+  margin-top: 20px;
+  font-size: 12px;
+  color: #8a94a3;
+  line-height: 1.5;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.header {
+  min-height: 78px;
+  padding: 14px 5%;
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.brand-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eaf2ff;
+  font-size: 25px;
+}
+
+.brand h1 {
+  margin: 0;
+  color: #173b73;
+  font-size: 22px;
+}
+
+.brand p {
+  margin: 3px 0 0;
+  color: #7b8798;
+  font-size: 12px;
+}
+
+.user-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 14px;
+  color: #596579;
+}
+
+.logout-button {
+  padding: 8px 14px;
+  border: 1px solid #d7dee9;
+  border-radius: 7px;
+  background: white;
+  color: #374151;
+}
+
+.logout-button:hover {
+  background: #f4f6f9;
+}
+
+/* =========================================================
+   MAIN
+   ========================================================= */
+
+.app {
+  min-height: 100vh;
+}
+
+.container {
+  width: min(1100px, 92%);
+  margin: 0 auto;
+  padding: 30px 0 50px;
+}
+
+.hero {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.hero h2 {
+  margin: 0;
+  font-size: 30px;
+  color: #173b73;
+}
+
+.hero p {
+  margin: 8px 0 0;
+  color: #6b7280;
+}
+
+/* =========================================================
+   SCAN PANEL
+   ========================================================= */
+
+.scan-panel {
+  background: white;
+  padding: 22px;
+  border-radius: 14px;
+  box-shadow: 0 5px 20px rgba(20, 40, 80, 0.06);
+  border: 1px solid #e5eaf1;
+}
+
+.scan-form {
+  display: flex;
+  gap: 10px;
+}
+
+.scan-form input {
+  flex: 1;
+  padding: 14px;
+  border: 1px solid #cfd7e3;
+  border-radius: 8px;
+  outline: none;
+  font-size: 14px;
+}
+
+.scan-form input:focus {
+  border-color: #3976d8;
+}
+
+.scan-form button {
+  min-width: 130px;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #2463c5;
+  color: white;
+  font-weight: 700;
+}
+
+.scan-form button:hover {
+  background: #1c51a3;
+}
+
+.scan-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.scan-note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #7b8798;
+}
+
+/* =========================================================
+   STATUS / ERROR
+   ========================================================= */
+
+.status-box {
+  margin-top: 18px;
+  padding: 13px 16px;
+  border-radius: 8px;
+  background: #eaf4ff;
+  border: 1px solid #c9e0ff;
+  color: #225a9c;
+  font-size: 14px;
+}
+
+.error-box {
+  margin-top: 15px;
+  padding: 13px 16px;
+  border-radius: 8px;
+  background: #fff0f0;
+  border: 1px solid #f2caca;
+  color: #b42318;
+  font-size: 14px;
+}
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+.history-controls {
+  margin: 22px 0;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.secondary-button,
+.small-button {
+  border: 1px solid #cfd7e3;
+  background: white;
+  color: #315a91;
+  border-radius: 7px;
+  padding: 9px 14px;
+  font-weight: 600;
+}
+
+.secondary-button:hover,
+.small-button:hover {
+  background: #f1f5fa;
+}
+
+.small-button {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+/* =========================================================
+   PANELS
+   ========================================================= */
+
+.panel {
+  margin-top: 20px;
+  padding: 24px;
+  background: white;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 5px 20px rgba(20, 40, 80, 0.05);
+}
+
+.panel h3 {
+  margin: 0 0 20px;
+  color: #173b73;
+  font-size: 19px;
+  border-bottom: 1px solid #edf0f4;
+  padding-bottom: 12px;
+}
+
+/* =========================================================
+   INFORMATION GRID
+   ========================================================= */
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.info-card {
+  padding: 15px;
+  border: 1px solid #e5eaf1;
+  border-radius: 9px;
+  background: #fafbfd;
+  min-width: 0;
+}
+
+.info-card .label {
+  display: block;
+  margin-bottom: 7px;
+  color: #7b8798;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.info-card strong {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  color: #293548;
+}
+
+/* =========================================================
+   SECURITY SCORE GAUGE
+   ========================================================= */
+
+.gauge-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px 0 28px;
+}
+
+.gauge {
+  width: 210px;
+  height: 105px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 210px 210px 0 0;
+
+  background:
+    conic-gradient(
+      from 270deg,
+      #dc3545 0deg,
+      #f0ad4e 55deg,
+      #f7d154 115deg,
+      #5cb85c 180deg,
+      #e8edf3 180deg,
+      #e8edf3 360deg
+    );
+}
+
+/*
+   Inner white area creates the semicircle effect.
+*/
+
+.gauge::after {
+  content: "";
+  position: absolute;
+  width: 150px;
+  height: 75px;
+  left: 30px;
+  bottom: 0;
+  background: white;
+  border-radius: 150px 150px 0 0;
+}
+
+.gauge-inner {
+  position: absolute;
+  z-index: 3;
+  width: 100%;
+  bottom: 8px;
+  text-align: center;
+}
+
+.gauge-number {
+  font-size: 32px;
+  font-weight: 800;
+  color: #173b73;
+}
+
+.gauge-label {
+  font-size: 12px;
+  color: #7b8798;
+}
+
+.gauge-grade {
+  margin-top: 12px;
+  font-size: 16px;
+  color: #4b5563;
+}
+
+.gauge-grade strong {
+  color: #173b73;
+}
+
+/* =========================================================
+   INFO ROWS
+   ========================================================= */
+
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 13px 0;
+  border-top: 1px solid #edf0f4;
+}
+
+.info-row .label {
+  font-weight: 600;
+  color: #596579;
+}
+
+/* =========================================================
+   PASS / FAIL
+   ========================================================= */
+
+.pass {
+  color: #16803c;
+  font-weight: 700;
+}
+
+.fail {
+  color: #c62828;
+  font-weight: 700;
+}
+
+/* =========================================================
+   SECURITY HEADERS
+   ========================================================= */
+
+.security-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.security-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 15px;
+  border: 1px solid #e5eaf1;
+  border-radius: 9px;
+  background: #fafbfd;
+}
+
+.security-item strong {
+  font-size: 14px;
+  color: #293548;
+}
+
+.security-item p {
+  margin: 5px 0 0;
+  color: #7b8798;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+/* =========================================================
+   HOW TO FIX
+   ========================================================= */
+
+.fix-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fix-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px;
+  border-radius: 8px;
+  background: #fffaf0;
+  border: 1px solid #f1e3bc;
+}
+
+.fix-number {
+  min-width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e7a72c;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fix-item p {
+  margin: 3px 0;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+/* =========================================================
+   HISTORY TABLE
+   ========================================================= */
+
+.history-panel {
+  overflow: hidden;
+}
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th {
+  text-align: left;
+  background: #f3f6fa;
+  color: #46546a;
+  font-weight: 700;
+  padding: 12px;
+  border-bottom: 1px solid #dfe5ed;
+  white-space: nowrap;
+}
+
+td {
+  padding: 12px;
+  border-bottom: 1px solid #edf0f4;
+  color: #596579;
+}
+
+tr:hover td {
+  background: #fafbfd;
+}
+
+.grade-badge {
+  display: inline-block;
+  padding: 4px 9px;
+  border-radius: 12px;
+  background: #edf3ff;
+  color: #315a91;
+  font-weight: 700;
+}
+
+.empty {
+  color: #7b8798;
+  font-size: 14px;
+}
+
+/* =========================================================
+   REPORT BUTTON
+   ========================================================= */
+
+.report-section {
+  margin-top: 25px;
+  text-align: center;
+}
+
+.download-button {
+  border: none;
+  padding: 13px 22px;
+  border-radius: 8px;
+  background: #198754;
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.download-button:hover {
+  background: #157347;
+}
+
+/* =========================================================
+   FOOTER / DISCLAIMER
+   ========================================================= */
+
+.footer {
+  margin-top: 35px;
+  padding: 20px;
+  border-radius: 10px;
+  background: #fff8e8;
+  border: 1px solid #f1dfaa;
+  text-align: center;
+  color: #6f5b2a;
+}
+
+.footer strong {
+  display: block;
+  margin-bottom: 7px;
+}
+
+.footer p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* =========================================================
+   RESPONSIVE DESIGN
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 15px 4%;
+  }
+
+  .user-section {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .container {
+    width: 94%;
+    padding-top: 22px;
+  }
+
+  .hero h2 {
+    font-size: 24px;
+  }
+
+  .scan-form {
+    flex-direction: column;
+  }
+
+  .scan-form button {
+    width: 100%;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    padding: 18px;
+  }
+
+  .security-item {
+    align-items: flex-start;
+  }
+
+  .login-card {
+    padding: 28px 22px;
+  }
+
+}
+
+@media (max-width: 450px) {
+
+  .brand h1 {
+    font-size: 19px;
+  }
+
+  .brand p {
+    font-size: 11px;
+  }
+
+  .user-section {
+    font-size: 12px;
+  }
+
+  .hero h2 {
+    font-size: 22px;
+  }
+
+  .gauge {
+    width: 190px;
+    height: 95px;
+  }
+
+  .gauge::after {
+    width: 136px;
+    height: 68px;
+    left: 27px;
+  }
+
+}

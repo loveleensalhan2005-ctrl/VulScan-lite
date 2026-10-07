@@ -1,0 +1,44 @@
+{
+    "url": "https://example.com",
+    "status_code": 200,
+    "response_time": 0.418,
+    "cms_detection": {
+        "detected": false,
+        "name": null,
+        "powered_by": null
+    },
+    "hostname": "example.com",
+    "ip_address": "172.66.147.243",
+    "redirects": [],
+    "final_url": "https://example.com/",
+    "security_headers": {
+        "Content-Security-Policy": {
+            "present": false,
+            "value": null
+        },
+        "X-Frame-Options": {
+            "present": false,
+            "value": null
+        },
+        "Strict-Transport-Security": {
+            "present": false,
+            "value": null
+        }
+    },
+    "security_score": 20,
+    "security_grade": "F",
+    "server": "cloudflare",
+    "allowed_methods": "GET, HEAD",
+    "cookies": [],
+    "ssl_tls": {
+        "issuer": "((('countryName', 'US'),), (('organizationName', 'SSL Corporation'),), (('commonName', 'Cloudflare TLS Issuing ECC CA 3'),))",
+        "valid_from": "Sep 26 22:49:11 2026 GMT",
+        "valid_until": "Dec 25 22:56:35 2026 GMT",
+        "cipher": "('TLS_AES_256_GCM_SHA384', 'TLSv1.3', 256)"
+    },
+    "summary": {
+        "ssl_tls": "PASS",
+        "dns_ip": "PASS",
+        "scan_status": "Completed"
+    }
+}
