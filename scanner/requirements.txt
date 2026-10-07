@@ -42,3 +42,4 @@ vine==5.1.0
 wcwidth==0.8.4
 Werkzeug==3.1.8
 yarl==1.25.1
+reportlab==5.0.1
