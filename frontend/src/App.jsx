@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://vulscan-lite-a66m.onrender.com";
 
 function App() {
   // =========================================================
@@ -135,6 +135,10 @@ function App() {
       if (response.ok) {
         setHistory(data.history || []);
         setShowHistory(true);
+      } else {
+        setError(
+          data.error || "Unable to load scan history."
+        );
       }
     } catch (err) {
       setError("Unable to load scan history.");
@@ -206,7 +210,6 @@ function App() {
   async function pollScanStatus(id) {
     let attempts = 0;
 
-    // 120 attempts × 1 second = 2 minutes
     const maxAttempts = 120;
 
     const poll = async () => {
@@ -222,12 +225,12 @@ function App() {
 
         const data = await response.json();
 
-        // -----------------------------------------------------
-        // SUCCESS / COMPLETED STATUS
-        // -----------------------------------------------------
-
         const currentStatus =
           String(data.status || "").toLowerCase();
+
+        // -----------------------------------------------------
+        // SUCCESS / COMPLETED
+        // -----------------------------------------------------
 
         if (
           currentStatus === "success" ||
@@ -243,7 +246,6 @@ function App() {
             return;
           }
 
-          // Backend says completed but result is missing
           setError(
             "Scan completed, but no result was returned."
           );
@@ -253,16 +255,14 @@ function App() {
         }
 
         // -----------------------------------------------------
-        // FAILURE STATUS
+        // FAILURE
         // -----------------------------------------------------
 
         if (
           currentStatus === "failure" ||
           currentStatus === "failed"
         ) {
-          setError(
-            data.error || "Scan failed."
-          );
+          setError(data.error || "Scan failed.");
           setStatus("");
           setScanning(false);
           return;
@@ -734,7 +734,7 @@ function App() {
 
             </section>
 
-            {/* SECURITY SCORE / GAUGE */}
+            {/* SECURITY SCORE */}
 
             <section className="panel">
 
