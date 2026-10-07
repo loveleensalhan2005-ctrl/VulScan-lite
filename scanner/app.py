@@ -52,7 +52,8 @@ CORS(
         "http://localhost:5173",
         "http://localhost:5174",
         "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174"
+        "http://127.0.0.1:5174",
+        "https://vulscan-lite-dashboard.onrender.com"
     ]
 )
 
@@ -61,8 +62,11 @@ CORS(
 # SESSION SETTINGS
 # =========================================================
 
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-app.config["SESSION_COOKIE_SECURE"] = False
+# Required for the live Render dashboard because
+# frontend and backend are on different origins.
+
+app.config["SESSION_COOKIE_SAMESITE"] = "None"
+app.config["SESSION_COOKIE_SECURE"] = True
 
 
 # =========================================================
