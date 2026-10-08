@@ -7,13 +7,15 @@ from flask import (
 )
 
 from flask_cors import CORS
-from celery.result import AsyncResult
-from celery_worker import celery_app
 
 from io import BytesIO
 import sqlite3
 import os
 import time
+import uuid
+import json
+
+from scanner import run_scan
 
 from werkzeug.security import (
     generate_password_hash,
@@ -38,7 +40,10 @@ from reportlab.lib.styles import getSampleStyleSheet
 
 app = Flask(__name__)
 
-app.secret_key = "vulscan-lite-project-secret-key"
+app.secret_key = os.getenv(
+    "FLASK_SECRET_KEY",
+    "vulscan-lite-project-secret-key"
+)
 
 
 # =========================================================
@@ -61,9 +66,6 @@ CORS(
 # =========================================================
 # SESSION SETTINGS
 # =========================================================
-
-# Required for the live Render dashboard because
-# frontend and backend are on different origins.
 
 app.config["SESSION_COOKIE_SAMESITE"] = "None"
 app.config["SESSION_COOKIE_SECURE"] = True
@@ -100,7 +102,10 @@ def init_db():
 
     cursor = connection.cursor()
 
+    # -----------------------------------------------------
     # Users table
+    # -----------------------------------------------------
+
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS users (
@@ -111,7 +116,10 @@ def init_db():
         """
     )
 
+    # -----------------------------------------------------
     # Scan history table
+    # -----------------------------------------------------
+
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS scan_history (
@@ -122,12 +130,40 @@ def init_db():
             score INTEGER,
             grade TEXT,
             status_code INTEGER,
+            result_json TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """
     )
 
+    # -----------------------------------------------------
+    # Database migration
+    # -----------------------------------------------------
+    # If an older database already exists without
+    # result_json, add the column automatically.
+
+    cursor.execute(
+        "PRAGMA table_info(scan_history)"
+    )
+
+    columns = [
+        row["name"]
+        for row in cursor.fetchall()
+    ]
+
+    if "result_json" not in columns:
+
+        cursor.execute(
+            """
+            ALTER TABLE scan_history
+            ADD COLUMN result_json TEXT
+            """
+        )
+
+    # -----------------------------------------------------
     # Demo user
+    # -----------------------------------------------------
+
     cursor.execute(
         "SELECT * FROM users WHERE username = ?",
         ("student",)
@@ -162,13 +198,22 @@ init_db()
 
 
 # =========================================================
-# RATE LIMITING
+# IN-MEMORY SCAN RESULTS
+# =========================================================
+#
+# Used for immediate access after a scan.
+#
+# The complete result is ALSO stored in SQLite
+# as result_json so PDF generation can continue
+# even if the application restarts.
 # =========================================================
 
-# Simple in-memory rate limiter.
-#
-# Each logged-in user can start maximum
-# 5 scans during a rolling 60-second window.
+scan_results = {}
+
+
+# =========================================================
+# RATE LIMITING
+# =========================================================
 
 RATE_LIMIT = 5
 RATE_WINDOW = 60
@@ -184,7 +229,6 @@ def check_rate_limit(username):
 
         scan_requests[username] = []
 
-    # Keep only requests inside the last 60 seconds
     scan_requests[username] = [
         timestamp
         for timestamp in scan_requests[username]
@@ -361,7 +405,6 @@ def start_scan():
                 "Please login before starting a scan."
         }), 401
 
-    # Rate limit
     if not check_rate_limit(username):
 
         return jsonify({
@@ -388,7 +431,6 @@ def start_scan():
                 "Please provide a website URL."
         }), 400
 
-    # Basic URL validation
     if not (
         url.startswith("http://")
         or url.startswith("https://")
@@ -402,16 +444,81 @@ def start_scan():
 
     try:
 
-        task = celery_app.send_task(
-            "celery_worker.scan_website",
-            args=[url]
+        task_id = str(
+            uuid.uuid4()
         )
+
+        # Run passive scanner directly.
+        result = run_scan(url)
+
+        if not isinstance(
+            result,
+            dict
+        ):
+
+            return jsonify({
+                "success": False,
+                "message":
+                    "Scanner returned an invalid result."
+            }), 500
+
+        # Keep immediate access in memory.
+        scan_results[task_id] = result
+
+        # -------------------------------------------------
+        # Permanently save complete scan result
+        # -------------------------------------------------
+
+        connection = get_db()
+
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            INSERT INTO scan_history
+            (
+                username,
+                task_id,
+                url,
+                score,
+                grade,
+                status_code,
+                result_json
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                username,
+                task_id,
+                result.get(
+                    "url",
+                    url
+                ),
+                result.get(
+                    "security_score"
+                ),
+                result.get(
+                    "security_grade"
+                ),
+                result.get(
+                    "status_code"
+                ),
+                json.dumps(
+                    result,
+                    default=str
+                )
+            )
+        )
+
+        connection.commit()
+
+        connection.close()
 
         return jsonify({
             "success": True,
-            "task_id": task.id,
+            "task_id": task_id,
             "message":
-                "Scan queued successfully."
+                "Scan completed successfully."
         })
 
     except Exception as e:
@@ -419,7 +526,7 @@ def start_scan():
         return jsonify({
             "success": False,
             "message":
-                "Unable to queue scan.",
+                "Unable to run scan.",
             "error": str(e)
         }), 500
 
@@ -446,107 +553,82 @@ def scan_status(task_id):
                 "Please login."
         }), 401
 
-    task = AsyncResult(
-        task_id,
-        app=celery_app
+    # -----------------------------------------------------
+    # First check memory
+    # -----------------------------------------------------
+
+    result = scan_results.get(
+        task_id
     )
 
-    if task.state == "PENDING":
+    # -----------------------------------------------------
+    # If not in memory, load from database
+    # -----------------------------------------------------
 
-        return jsonify({
-            "status": "pending"
-        })
+    if result is None:
 
-    if task.state == "STARTED":
-
-        return jsonify({
-            "status": "running"
-        })
-
-    if task.state == "FAILURE":
-
-        return jsonify({
-            "status": "failed",
-            "error": str(task.info)
-        })
-
-    if task.state == "SUCCESS":
-
-        result = task.result
-
-        if not isinstance(
-            result,
-            dict
-        ):
-
-            return jsonify({
-                "status": "failed",
-                "error":
-                    "Invalid scan result."
-            }), 500
-
-        # Save result into history
         connection = get_db()
 
         cursor = connection.cursor()
 
         cursor.execute(
             """
-            SELECT id
+            SELECT result_json
             FROM scan_history
             WHERE task_id = ?
+            AND username = ?
             """,
-            (task_id,)
+            (
+                task_id,
+                username
+            )
         )
 
-        already_saved = cursor.fetchone()
-
-        if not already_saved:
-
-            cursor.execute(
-                """
-                INSERT INTO scan_history
-                (
-                    username,
-                    task_id,
-                    url,
-                    score,
-                    grade,
-                    status_code
-                )
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    username,
-                    task_id,
-                    result.get(
-                        "url",
-                        ""
-                    ),
-                    result.get(
-                        "security_score"
-                    ),
-                    result.get(
-                        "security_grade"
-                    ),
-                    result.get(
-                        "status_code"
-                    )
-                )
-            )
-
-            connection.commit()
+        row = cursor.fetchone()
 
         connection.close()
 
+        if row and row["result_json"]:
+
+            try:
+
+                result = json.loads(
+                    row["result_json"]
+                )
+
+                scan_results[task_id] = result
+
+            except Exception:
+
+                result = None
+
+    # -----------------------------------------------------
+    # Result not found
+    # -----------------------------------------------------
+
+    if result is None:
+
         return jsonify({
-            "status": "completed",
-            "result": result
-        })
+            "status": "not_found",
+            "message":
+                "Scan result is no longer available. "
+                "Please start a new scan."
+        }), 404
+
+    if not isinstance(
+        result,
+        dict
+    ):
+
+        return jsonify({
+            "status": "failed",
+            "error":
+                "Invalid scan result."
+        }), 500
 
     return jsonify({
-        "status":
-            task.state.lower()
+        "status": "completed",
+        "result": result
     })
 
 
@@ -641,7 +723,10 @@ def generate_report(task_id):
                 "Please login."
         }), 401
 
-    # Make sure the scan belongs to logged-in user
+    # -----------------------------------------------------
+    # Verify ownership
+    # -----------------------------------------------------
+
     connection = get_db()
 
     cursor = connection.cursor()
@@ -671,24 +756,59 @@ def generate_report(task_id):
                 "Scan report not found."
         }), 404
 
-    task = AsyncResult(
-        task_id,
-        app=celery_app
+    # -----------------------------------------------------
+    # Get result from memory first
+    # -----------------------------------------------------
+
+    result = scan_results.get(
+        task_id
     )
 
-    if task.state != "SUCCESS":
+    # -----------------------------------------------------
+    # If missing, restore from SQLite
+    # -----------------------------------------------------
+
+    if result is None:
+
+        result_json = history_row["result_json"]
+
+        if result_json:
+
+            try:
+
+                result = json.loads(
+                    result_json
+                )
+
+                scan_results[task_id] = result
+
+            except Exception:
+
+                result = None
+
+    if result is None:
 
         return jsonify({
             "success": False,
             "message":
-                "Scan result is not available yet."
-        }), 400
+                "Scan result is no longer available. "
+                "Please run a new scan."
+        }), 404
 
-    result = task.result
+    if not isinstance(
+        result,
+        dict
+    ):
 
-    # -----------------------------------------------------
-    # PDF setup
-    # -----------------------------------------------------
+        return jsonify({
+            "success": False,
+            "message":
+                "Invalid scan result."
+        }), 500
+
+    # =====================================================
+    # PDF SETUP
+    # =====================================================
 
     pdf_buffer = BytesIO()
 
@@ -711,9 +831,9 @@ def generate_report(task_id):
 
     story = []
 
-    # -----------------------------------------------------
-    # Title
-    # -----------------------------------------------------
+    # =====================================================
+    # TITLE
+    # =====================================================
 
     story.append(
         Paragraph(
@@ -737,9 +857,9 @@ def generate_report(task_id):
         Spacer(1, 20)
     )
 
-    # -----------------------------------------------------
-    # 1. Scan Information
-    # -----------------------------------------------------
+    # =====================================================
+    # 1. SCAN INFORMATION
+    # =====================================================
 
     story.append(
         Paragraph(
@@ -820,15 +940,17 @@ def generate_report(task_id):
         ])
     )
 
-    story.append(scan_table)
+    story.append(
+        scan_table
+    )
 
     story.append(
         Spacer(1, 20)
     )
 
-    # -----------------------------------------------------
-    # 2. Security Assessment
-    # -----------------------------------------------------
+    # =====================================================
+    # 2. SECURITY ASSESSMENT
+    # =====================================================
 
     story.append(
         Paragraph(
@@ -893,9 +1015,9 @@ def generate_report(task_id):
         Spacer(1, 20)
     )
 
-    # -----------------------------------------------------
-    # 3. Security Headers
-    # -----------------------------------------------------
+    # =====================================================
+    # 3. SECURITY HEADERS
+    # =====================================================
 
     story.append(
         Paragraph(
@@ -945,6 +1067,7 @@ def generate_report(task_id):
         else:
 
             present = bool(header)
+
             value = str(header)
 
         header_data.append([
@@ -990,15 +1113,17 @@ def generate_report(task_id):
         ])
     )
 
-    story.append(header_table)
+    story.append(
+        header_table
+    )
 
     story.append(
         Spacer(1, 20)
     )
 
-    # -----------------------------------------------------
-    # 4. DNS / IP Information
-    # -----------------------------------------------------
+    # =====================================================
+    # 4. DNS / IP INFORMATION
+    # =====================================================
 
     story.append(
         Paragraph(
@@ -1006,6 +1131,17 @@ def generate_report(task_id):
             heading_style
         )
     )
+
+    summary = result.get(
+        "summary",
+        {}
+    )
+
+    if not isinstance(
+        summary,
+        dict
+    ):
+        summary = {}
 
     dns_data = [
         ["Property", "Value"],
@@ -1030,10 +1166,7 @@ def generate_report(task_id):
         [
             "DNS Status",
             str(
-                result.get(
-                    "summary",
-                    {}
-                ).get(
+                summary.get(
                     "dns_ip",
                     "N/A"
                 )
@@ -1067,15 +1200,17 @@ def generate_report(task_id):
         ])
     )
 
-    story.append(dns_table)
+    story.append(
+        dns_table
+    )
 
     story.append(
         Spacer(1, 20)
     )
 
-    # -----------------------------------------------------
-    # 5. Remediation Guidance
-    # -----------------------------------------------------
+    # =====================================================
+    # 5. REMEDIATION GUIDANCE
+    # =====================================================
 
     story.append(
         Paragraph(
@@ -1126,19 +1261,24 @@ def generate_report(task_id):
                     )
                 )
 
-                story.append(
-                    Paragraph(
-                        message,
-                        normal_style
-                    )
-                )
+                if message:
 
-                story.append(
-                    Paragraph(
-                        f"<b>How to Fix:</b> {fix}",
-                        normal_style
+                    story.append(
+                        Paragraph(
+                            str(message),
+                            normal_style
+                        )
                     )
-                )
+
+                if fix:
+
+                    story.append(
+                        Paragraph(
+                            f"<b>How to Fix:</b> "
+                            f"{fix}",
+                            normal_style
+                        )
+                    )
 
                 story.append(
                     Spacer(1, 10)
@@ -1157,9 +1297,9 @@ def generate_report(task_id):
         Spacer(1, 10)
     )
 
-    # -----------------------------------------------------
+    # =====================================================
     # 6. SSL / TLS
-    # -----------------------------------------------------
+    # =====================================================
 
     story.append(
         Paragraph(
@@ -1263,9 +1403,9 @@ def generate_report(task_id):
         Spacer(1, 20)
     )
 
-    # -----------------------------------------------------
-    # 7. Redirect Analysis
-    # -----------------------------------------------------
+    # =====================================================
+    # 7. REDIRECT ANALYSIS
+    # =====================================================
 
     story.append(
         Paragraph(
@@ -1290,20 +1430,25 @@ def generate_report(task_id):
 
         for redirect in redirects:
 
-            redirect_data.append([
-                str(
-                    redirect.get(
-                        "status_code",
-                        "N/A"
+            if isinstance(
+                redirect,
+                dict
+            ):
+
+                redirect_data.append([
+                    str(
+                        redirect.get(
+                            "status_code",
+                            "N/A"
+                        )
+                    ),
+                    str(
+                        redirect.get(
+                            "location",
+                            "N/A"
+                        )
                     )
-                ),
-                str(
-                    redirect.get(
-                        "location",
-                        "N/A"
-                    )
-                )
-            ])
+                ])
 
         redirect_table = Table(
             redirect_data,
@@ -1354,13 +1499,128 @@ def generate_report(task_id):
         Spacer(1, 20)
     )
 
-    # -----------------------------------------------------
-    # 8. Disclaimer
-    # -----------------------------------------------------
+    # =====================================================
+    # 8. COOKIES SECURITY
+    # =====================================================
 
     story.append(
         Paragraph(
-            "8. Disclaimer",
+            "8. Cookies Security",
+            heading_style
+        )
+    )
+
+    cookies = result.get(
+        "cookies",
+        []
+    )
+
+    if cookies:
+
+        cookie_data = [
+            [
+                "Cookie",
+                "Secure",
+                "HttpOnly",
+                "SameSite"
+            ]
+        ]
+
+        for cookie in cookies:
+
+            if isinstance(
+                cookie,
+                dict
+            ):
+
+                cookie_data.append([
+                    str(
+                        cookie.get(
+                            "name",
+                            "Unknown"
+                        )
+                    ),
+                    str(
+                        cookie.get(
+                            "secure",
+                            False
+                        )
+                    ),
+                    str(
+                        cookie.get(
+                            "httponly",
+                            cookie.get(
+                                "http_only",
+                                False
+                            )
+                        )
+                    ),
+                    str(
+                        cookie.get(
+                            "samesite",
+                            "N/A"
+                        )
+                    )
+                ])
+
+        cookie_table = Table(
+            cookie_data,
+            colWidths=[
+                150,
+                100,
+                100,
+                150
+            ]
+        )
+
+        cookie_table.setStyle(
+            TableStyle([
+                (
+                    "BACKGROUND",
+                    (0, 0),
+                    (-1, 0),
+                    colors.lightgrey
+                ),
+                (
+                    "GRID",
+                    (0, 0),
+                    (-1, -1),
+                    0.5,
+                    colors.grey
+                ),
+                (
+                    "VALIGN",
+                    (0, 0),
+                    (-1, -1),
+                    "TOP"
+                )
+            ])
+        )
+
+        story.append(
+            cookie_table
+        )
+
+    else:
+
+        story.append(
+            Paragraph(
+                "No cookies detected.",
+                normal_style
+            )
+        )
+
+    story.append(
+        Spacer(1, 20)
+    )
+
+    # =====================================================
+    # 9. DISCLAIMER
+    # =====================================================
+
+    story.append(
+        Paragraph(
+            "9. Disclaimer",
             heading_style
         )
     )
@@ -1385,11 +1645,13 @@ def generate_report(task_id):
         )
     )
 
-    # -----------------------------------------------------
+    # =====================================================
     # BUILD PDF
-    # -----------------------------------------------------
+    # =====================================================
 
-    document.build(story)
+    document.build(
+        story
+    )
 
     pdf_buffer.seek(0)
 
